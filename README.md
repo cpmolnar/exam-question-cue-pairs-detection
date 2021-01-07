@@ -17,7 +17,8 @@ Of course, cues can also be detected by revealing contextual information of anot
 - python3
 - pip3 install -r requirements.txt
 
-# Sample Results (High Confidence)
+# Sample Results (High Confidence)  
+```
 progress: 621 / 81810  
 text: the posterior circulation of the brain is best demonstrated by injecting contrast material into the vertebral artery.  
 blood from the inferior vena cava enters the heart through the right atrium.  
@@ -44,6 +45,7 @@ prediction: sella turcica
 start: 6  
 end: 7  
 confidence: 0.8438154495784939  
+```  
 
 # Author  
 Carl Molnar  
