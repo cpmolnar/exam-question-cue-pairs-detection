@@ -1,162 +1,50 @@
-# BERT-SQuAD
+# Exam Question Cue Detection With BERT-SQuAD
+A project leveraging Huggingface Transformers' pre-trained BERT-SQuAD Question Answering model to detect "cue" questions within an exam question database. 
+Cue questions are pairs of questions whereby knowing the answer to one question reveals the answer to another.
+The approach I took is:
+- Search for pairs of questions with the same answer.
+- Rearrange one potential cue, and four other random questions, into statements.
+- Randomly arrange the five questions into a block of text.
+- Use the trained model to search for the answer to the given question within the generated text.
 
-Use google BERT to do SQuAD  !
+This roughly simulates the trained environment of the BERT-SQuAD model.
+Model accuracy is inconclusive, but it certainly achieves interesting results fairly quickly on my very modest hardware.
+Could warrant further investigation with a knowledgeable team to analyze results, or labelled data.
 
-
-# What is SQuAD?
-Stanford Question Answering Dataset (SQuAD) is a reading comprehension dataset, consisting of questions posed by crowdworkers on a set of Wikipedia articles, where the answer to every question is a segment of text, or span, from the corresponding reading passage, or the question might be unanswerable.
+Of course, cues can also be detected by revealing contextual information of another question, but this is far outside the scope of what this model can achieve.
 
 # Requirements
 - python3
 - pip3 install -r requirements.txt
 
-# Result
-`model` : bert-large-uncased-whole-word-masking 
-```json
-{"exact_match": 86.91579943235573, "f1": 93.1532499015869}
-```
-## Pretrained model download from [here](https://www.dropbox.com/s/8jnulb2l4v7ikir/model.zip)
-unzip and move files to model directory
+# Sample Results (High Confidence)
+progress: 621 / 81810
+text: the posterior circulation of the brain is best demonstrated by injecting contrast material into the vertebral artery. 
+blood from the inferior vena cava enters the heart through the right atrium. 
+there are no lymphatic capillaries in the brain. 
+amaurosis fugax may result from a stenosis of common carotid artery. 
+a cholesteatoma is a pathologic process requiring a ct scan of the middle ear.
+question: there are no lymphatic capillaries in the?
+question answer: brain
+prediction: brain
+start: 37
+end: 37
+confidence: 0.8210961429022994
 
-# Inference
-```python
-from bert import QA
+progress: 3633 / 81810
+text: 
+pituitary gland is situated in the sella turcica. 
+anterior communicating is an intracranial artery. 
+8 cranial bones make up the human skull. 
+on a lateral projection of a cerebral angiogram the large vessel draining from anterior to posterior along the curve of the cranial bone is the superior sagittal sinus. 
+sigmoid sinus drains venous blood directly from the brain to the internal jugular vein.
+question: what sphenoid bone structure contains the pituitary gland?
+question answer: sella turcica
+prediction: sella turcica
+start: 6
+end: 7
+confidence: 0.8438154495784939
 
-model = QA('model')
-
-doc = "Victoria has a written constitution enacted in 1975, but based on the 1855 colonial constitution, passed by the United Kingdom Parliament as the Victoria Constitution Act 1855, which establishes the Parliament as the state's law-making body for matters coming under state responsibility. The Victorian Constitution can be amended by the Parliament of Victoria, except for certain 'entrenched' provisions that require either an absolute majority in both houses, a three-fifths majority in both houses, or the approval of the Victorian people in a referendum, depending on the provision."
-
-q = 'When did Victoria enact its constitution?'
-
-answer = model.predict(doc,q)
-
-print(answer['answer'])
-# 1975
-print(ans.keys())
-# dict_keys(['answer', 'start', 'end', 'confidence', 'document']))
-```
-`model.predict(doc,q)` return `dict`
-```json
-{
-"answer" : "answer text",
-"start" : "start index",
-"end" : "end index",
-"confiednce" : "confidence of answer",
-"document" : "tokenzied document , list"
-}
-```
-
-# Deploy REST-API
-BERT QA model deployed as rest api
-
-```bash
-python api.py
-```
-API will be live at `0.0.0.0:8000` endpoint `predict`
-
-### cURL request
-```bash
-curl -X POST http://0.0.0.0:8000/predict -H 'Content-Type: application/json' -d '{ "document": "Victoria has a written constitution enacted in 1975, but based on the 1855 colonial constitution, passed by the United Kingdom Parliament as the Victoria Constitution Act 1855, which establishes the Parliament as the states law-making body for matters coming under state responsibility. The Victorian Constitution can be amended by the Parliament of Victoria, except for certain 'entrenched' provisions that require either an absolute majority in both houses, a three-fifths majority in both houses, or the approval of the Victorian people in a referendum, depending on the provision.","question":"When did Victoria enact its constitution?" }'
-```
-#### Output
-```json
-{
-    "result": {
-        "answer": "1975",
-        "confidence": 0.940746070672879,
-        "document": [
-            "Victoria",
-            "has",
-            "a",
-            "written",
-            "constitution",
-            "enacted",
-            "in",
-            "1975,",
-            "but",
-            "based",
-            "on",
-            "the",
-            "1855",
-            "colonial",
-            "constitution,",
-            "passed",
-            "by",
-            "the",
-            "United",
-            "Kingdom",
-            "Parliament",
-            "as",
-            "the",
-            "Victoria",
-            "Constitution",
-            "Act",
-            "1855,",
-            "which",
-            "establishes",
-            "the",
-            "Parliament",
-            "as",
-            "the",
-            "states",
-            "law-making",
-            "body",
-            "for",
-            "matters",
-            "coming",
-            "under",
-            "state",
-            "responsibility.",
-            "The",
-            "Victorian",
-            "Constitution",
-            "can",
-            "be",
-            "amended",
-            "by",
-            "the",
-            "Parliament",
-            "of",
-            "Victoria,",
-            "except",
-            "for",
-            "certain",
-            "entrenched",
-            "provisions",
-            "that",
-            "require",
-            "either",
-            "an",
-            "absolute",
-            "majority",
-            "in",
-            "both",
-            "houses,",
-            "a",
-            "three-fifths",
-            "majority",
-            "in",
-            "both",
-            "houses,",
-            "or",
-            "the",
-            "approval",
-            "of",
-            "the",
-            "Victorian",
-            "people",
-            "in",
-            "a",
-            "referendum,",
-            "depending",
-            "on",
-            "the",
-            "provision."
-        ],
-        "end": 7,
-        "start": 7
-    }
-}
-```
-#### Postman
-![postman output image](/img/postman.png)
+# Author  
+Carl Molnar  
+3/12/2020

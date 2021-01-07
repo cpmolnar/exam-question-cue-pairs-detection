@@ -2,6 +2,8 @@ from __future__ import absolute_import, division, print_function
 
 import collections
 import math
+import random
+import re
 
 import numpy as np
 import torch
@@ -283,14 +285,8 @@ def to_list(tensor):
 
 def _get_best_indexes(logits, n_best_size):
     """Get the n-best logits from a list."""
-    index_and_score = sorted(enumerate(logits), key=lambda x: x[1], reverse=True)
-
-    best_indexes = []
-    for i in range(len(index_and_score)):
-        if i >= n_best_size:
-            break
-        best_indexes.append(index_and_score[i][0])
-    return best_indexes
+    indices_with_logits = sorted(enumerate(logits), key=lambda x: x[1], reverse=True)[:n_best_size]
+    return [tuple[0] for tuple in indices_with_logits]
 
 RawResult = collections.namedtuple("RawResult",["unique_id", "start_logits", "end_logits"])
 
@@ -423,19 +419,19 @@ def get_answer(example, features, all_results, n_best_size,
         start_indexes = _get_best_indexes(result.start_logits, n_best_size)
         end_indexes = _get_best_indexes(result.end_logits, n_best_size)
         for start_index in start_indexes:
+            if start_index >= len(feature.tokens):
+                continue
+            if start_index not in feature.token_to_orig_map:
+                continue
+            if not feature.token_is_max_context.get(start_index, False):
+                continue
             for end_index in end_indexes:
                 # We could hypothetically create invalid predictions, e.g., predict
                 # that the start of the span is in the question. We throw out all
                 # invalid predictions.
-                if start_index >= len(feature.tokens):
-                    continue
                 if end_index >= len(feature.tokens):
                     continue
-                if start_index not in feature.token_to_orig_map:
-                    continue
                 if end_index not in feature.token_to_orig_map:
-                    continue
-                if not feature.token_is_max_context.get(start_index, False):
                     continue
                 if end_index < start_index:
                     continue
@@ -505,10 +501,58 @@ def get_answer(example, features, all_results, n_best_size,
 
     probs = _compute_softmax(total_scores)
     
-    answer = {"answer" : nbest[0].text,
-               "start" : nbest[0].start_index,
-               "end" : nbest[0].end_index,
-               "confidence" : probs[0],
-               "document" : example.doc_tokens
-             }
+    if (probs[0] < 0.7):
+        answer = {"prediction" : 'N/A',
+                   "start" : 0,
+                   "end" : 0,
+                   "confidence" : 1 - probs[0]
+                 }
+    else:
+        answer = {"prediction" : nbest[0].text,
+                   "start" : nbest[0].start_index,
+                   "end" : nbest[0].end_index,
+                   "confidence" : probs[0]
+                 }
+
     return answer
+
+# Convert a question and its answer into a statement
+def Questionize(text, text_answer):
+    if ('which of the following' in text):
+        text = text.replace('which of the following', text_answer)
+    elif ('which of these' in text):
+        text = text.replace('which of these', text_answer)
+    elif ('which two of the following' in text):
+        text = text.replace('which two of the following', text_answer)
+    elif ('which three of the following' in text):
+        text = text.replace('which two of the following', text_answer)
+    elif ('how many' in text):
+        text = text.replace('how many', text_answer)
+    elif (re.search('the.*?which is ', text)):
+        text += ' ' + text_answer
+    elif (re.search('which effect does.*?have', text)):
+        text = text.replace('which effect does ', '').replace('have', 'has the effect of ' + text_answer)
+    elif ('which' in text):
+        text = text.replace('which', text_answer)
+    elif ('what' in text):
+        text = text.replace('what', text_answer)
+    else:
+        text += ' ' + text_answer
+
+    return text
+
+def BuildText(text, text_answer, length, context):
+    text = Questionize(text, text_answer)
+    text_builder_ids = [random.randrange(0, length) for iter in range(4)]
+    for id in text_builder_ids:
+        fake_row = context.iloc[id]
+        fake_text = fake_row['Stem'].lower()
+        fake_text = fake_text.replace(':', '').replace('?', '')
+
+        fake_text_answer = fake_row['Dist' + fake_row['FullKey']]
+
+        fake_text = Questionize(fake_text, fake_text_answer)
+
+        text += ". " + fake_text
+
+    return text
