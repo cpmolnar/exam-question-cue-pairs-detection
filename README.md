@@ -13,6 +13,11 @@ Could warrant further investigation with a knowledgeable team to analyze results
 
 Of course, cues can also be detected by revealing contextual information of another question, but this is far outside the scope of what this model can achieve.  
 
+# Usage
+```
+python main.py
+```
+
 # Requirements
 - python3
 - pip3 install -r requirements.txt
